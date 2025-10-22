@@ -400,22 +400,29 @@ tcm_alluvial(data_sankey2, text.position = 1)
 ## 23. ppi_plot
 
 ```{r}
-data(string, package = "TCMNP")
-ppi_plot(string,
-    label.degree = 1,
-    nodes.color = "Spectral",
-    label.repel = TRUE)
+data("ppi_data",package = "TCMNP")
+ppi_plot(ppi_data, 
+         node.color = "Spectral",
+         node.size = c(1, 10),
+         label.size = 4,
+         label.degree = 1,
+         label.repel = TRUE,
+         edge.color = "lightgrey",
+         edge.width = c(0.2, 2),
+         rem.dis.inter = FALSE,
+         graph.layout = "kk")
 ```
 
 <img src= https://github.com/tcmlab/image/blob/main/ppi_plot_2.png height="400" />
 
 ```{r}
 
- ppi_plot(string, nodes.color = "Spectral",
-                label.degree = 1,
-                label.size = 3,
-                label.repel = TRUE,
-                graph.layout = 'circle')
+ ppi_plot(ppi_data,
+          nodes.color = "Spectral",
+          label.degree = 1,
+          label.size = 3,
+          label.repel = TRUE,
+          graph.layout = 'circle')
 ```
 
 <img src= https://github.com/tcmlab/image/blob/main/ppi_plot3.png height="400" />
