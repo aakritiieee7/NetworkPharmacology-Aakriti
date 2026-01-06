@@ -55,7 +55,7 @@
 #'   sample_n(100, replace = FALSE) %>%
 #'   as.data.frame()
 #' tcm_net(network.data, node.color= "Spectral",
-#' label.degree = 1, rem.dis.inter = TRUE,graph.layout = "fr",
+#' label.degree = 0, rem.dis.inter = TRUE,graph.layout = "fr",
 #' label.size = 3)
 #' }
 tcm_net <- function(network.data,
