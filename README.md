@@ -177,7 +177,8 @@ network.data <- xfbdf %>%
   as.data.frame()
 tcm_net(network.data, 
         label.degree = 3,
-        rem.dis.inter = TRUE)
+        rem.dis.inter = TRUE
+        show.all.labels = TRUE)
 ```
 
 <img src= https://github.com/tcmlab/image/blob/main/tcm_net.png height="400" />
