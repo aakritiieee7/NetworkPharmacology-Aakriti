@@ -68,144 +68,89 @@ tcm_net <- function(network.data,
                     edge.width = c(0.2, 2),
                     graph.layout = "kk",
                     rem.dis.inter = FALSE) {
-  network.data<-as.data.frame(network.data)
+
+  # Convert input to data frame
+  network.data <- as.data.frame(network.data)
+
+  # Ensure columns are character type
+  network.data$herb <- as.character(network.data$herb)
+  network.data$molecule <- as.character(network.data$molecule)
+  network.data$target <- as.character(network.data$target)
+
+  # Trim hidden spaces from all three columns
+  network.data <- network.data %>%
+    mutate(
+      molecule = stringr::str_trim(molecule),
+      herb = stringr::str_trim(herb),
+      target = stringr::str_trim(target)
+    )
+
+  # Remove duplicates AFTER cleaning
+  network.data <- unique(network.data)
+
+  # Create network links
   links <- rbind(
     network.data %>%
       dplyr::select(herb, molecule) %>%
       dplyr::rename(from = herb, to = molecule) %>%
       dplyr::mutate(weight = 1),
+
     network.data %>%
       dplyr::select(molecule, target) %>%
       dplyr::rename(from = molecule, to = target) %>%
       dplyr::mutate(weight = 1)
   ) %>%
     dplyr::distinct()
-  # Create a network graph from links and nodes
-  if (rem.dis.inter == FALSE) {
-    nodes <- links %>%
-      {
-        data.frame(node = c(.$from, .$to))
-      } %>%
-      dplyr::distinct()
-    net <- igraph::graph_from_data_frame(
-      d = links,
-      vertices = nodes,
-      directed = FALSE
-    )
-    # V and E are functions of the igraph package,
-    # which are used to modify the nodes (nodes) and
-    # connections (links) of the network graph respectively.
-    igraph::V(net)$degree <- igraph::degree(net)
-    igraph::V(net)$class <- c(
-      rep(
-        colnames(network.data)[1],
-        length(intersect(network.data[, 1], nodes$node))
-      ),
-      rep(
-        colnames(network.data)[2],
-        length(intersect(network.data[, 2], nodes$node))
-      ),
-      rep(
-        colnames(network.data)[3],
-        length(intersect(network.data[, 3], nodes$node))
-      )
-    )
-    igraph::V(net)$size <- igraph::degree(net)
-    igraph::E(net)$score <- igraph::E(net)$weight
 
-    # Plot with ggraph
-    # ggraph is a package based on ggplot2,
-    # the syntax is similar to regular ggplot2
-    col <- RColorBrewer::brewer.pal(8, name = node.color)
-    colorN <- grDevices::colorRampPalette(colors = col)(nrow(nodes))
-    names(colorN) <- nodes$node
+  # Create nodes list correctly (FIXED)
+  nodes <- data.frame(
+    node = unique(c(links$from, links$to)),
+    stringsAsFactors = FALSE
+  )
 
-    ggraph(net, layout = graph.layout) +
-      geom_edge_link0(aes(edge_linewidth = weight), edge_colour = edge.color) +
-      geom_edge_fan(aes(edge_width = score, colour = score),
-        color = edge.color, show.legend = TRUE
-      ) +
-      ggraph::geom_node_point(aes(
-        color = degree,
-        size = degree,
-        shape = class
-      ), alpha = 1.0) +
-      scale_color_gradientn(colours = rev(colorN)) +
-      geom_node_text(aes(
-        filter = degree >= label.degree,
-        label = name
-      ), size = label.size, repel = label.repel) +
-      scale_edge_width(range = edge.width) +
-      scale_size_continuous(name = "degree", range = node.size) +
-      ggraph::theme_graph(base_family = "sans")
-  } else if (rem.dis.inter == TRUE) {
-    links <- links %>%
-      dplyr::mutate(from_c = count(., from)$n[match(from, count(., from)$from)]) %>%
-      dplyr::mutate(to_c = count(., to)$n[match(to, count(., to)$to)]) %>%
-      filter(!(from_c == 1 & to_c == 1)) %>%
-      dplyr::select(1, 2, 3)
-    nodes <- links %>%
-      {
-        data.frame(node = c(.$from, .$to))
-      } %>%
-      dplyr::distinct()
-    col <- RColorBrewer::brewer.pal(8, name = node.color)
-    colorN <- grDevices::colorRampPalette(colors = col)(nrow(nodes))
-    names(colorN) <- nodes$node
+  # Build graph from data
+  net <- igraph::graph_from_data_frame(
+    d = links,
+    vertices = nodes,
+    directed = FALSE
+  )
 
-    # Create a network graph from links and nodes
-    net <- igraph::graph_from_data_frame(
-      d = links,
-      vertices = nodes,
-      directed = FALSE
-    )
-    # V and E are functions of the igraph package,
-    # which are used to modify the nodes (nodes) and
-    # connections (links) of the network graph respectively.
-    igraph::V(net)$degree <- igraph::degree(net)
-    igraph::V(net)$class <- c(
-      rep(
-        colnames(network.data)[1],
-        length(intersect(network.data[, 1], nodes$node))
-      ),
-      rep(
-        colnames(network.data)[2],
-        length(intersect(network.data[, 2], nodes$node))
-      ),
-      rep(
-        colnames(network.data)[3],
-        length(intersect(network.data[, 3], nodes$node))
-      )
-    )
-    igraph::V(net)$size <- igraph::degree(net)
-    igraph::E(net)$score <- igraph::E(net)$weight
+  # Assign node degrees
+  igraph::V(net)$degree <- igraph::degree(net)
 
-    # Plot with ggraph
-    ggraph(net, layout = graph.layout) +
-      geom_edge_link0(aes(edge_linewidth = weight),
-        edge_colour = edge.color
-      ) +
-      geom_edge_fan(aes(edge_width = score, colour = score),
-        color = edge.color, show.legend = TRUE
-      ) +
-      ggraph::geom_node_point(aes(
-        color = degree, size = degree,
-        shape = class
-      ), alpha = 1.0) +
-      scale_color_gradientn(colours = rev(colorN)) +
-      geom_node_text(
-        aes(
-          filter = degree >= label.degree,
-          label = name
-        ),
-        size = label.size,
-        repel = label.repel
-      ) +
-      scale_edge_width(range = edge.width) +
-      scale_size_continuous(
-        name = "degree",
-        range = node.size
-      ) +
-      ggraph::theme_graph(base_family = "sans")
-  }
+  # ---- CRITICAL FIX: Proper Class Assignment ----
+  node_vec <- as.character(nodes$node)
+
+  igraph::V(net)$class <- ifelse(
+    node_vec %in% network.data$herb, "herb",
+    ifelse(node_vec %in% network.data$molecule, "molecule", "target")
+  )
+
+  # Node size based on degree
+  igraph::V(net)$size <- igraph::degree(net)
+
+  # Edge score
+  igraph::E(net)$score <- igraph::E(net)$weight
+
+  # ---- FINAL PLOTTING (Readable + Logical Shapes) ----
+  ggraph::ggraph(net, layout = graph.layout) +
+    geom_edge_link0(aes(edge_linewidth = weight),
+                    edge_colour = edge.color) +
+
+    geom_node_point(aes(
+      color = degree,
+      size = degree,
+      shape = class
+    ), alpha = 1.0) +
+
+    ggplot2::scale_color_gradientn(colours = RColorBrewer::brewer.pal(8, name = node.color)) +
+    geom_node_text(aes(
+      filter = degree >= label.degree,
+      label = name
+    ), size = label.size, repel = label.repel) +
+
+    scale_edge_width(range = edge.width) +
+    scale_size_continuous(name = "degree",
+                          range = node.size) +
+    theme_graph()
 }
